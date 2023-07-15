@@ -16,7 +16,7 @@ const {
 } = require('./middlewares/logger');
 
 // запуск приложения и подключения
-const { PORT = 3000 } = process.env;
+const { PORT = 3100 } = process.env;
 const app = express();
 app.use(cors());
 mongoose.connect(MONGODB_URL);
