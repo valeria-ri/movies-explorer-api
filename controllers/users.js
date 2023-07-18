@@ -2,6 +2,14 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user');
 const { SALT_ROUNDS, MONGO_DUPLICATE_KEY_ERROR } = require('../utils/constants');
+const {
+  validationErrorMessage,
+  incorrectUserIdMessage,
+  unauthorizedErrorMessage,
+  notFoundUserMessage,
+  conflictErrorMessage,
+} = require('../utils/errors/errorMessages');
+
 const { signToken } = require('../utils/jwtAuth');
 
 const {
@@ -29,9 +37,9 @@ const createUser = (req, res, next) => {
     }))
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        next(new BadRequestError('Переданы некорректные данные при создании пользователя'));
+        next(new BadRequestError(validationErrorMessage));
       } else if (err.code === MONGO_DUPLICATE_KEY_ERROR) {
-        next(new ConflictError('Такой пользователь уже существует'));
+        next(new ConflictError(conflictErrorMessage));
       } else {
         next(err);
       }
@@ -46,12 +54,12 @@ const loginUser = (req, res, next) => {
     .findOne({ email })
     .select('+password')
     .orFail(() => {
-      throw new UnauthorizedError('Неверный email или пароль');
+      throw new UnauthorizedError(unauthorizedErrorMessage);
     })
     .then((user) => Promise.all([user, bcrypt.compare(password, user.password)]))
     .then(([user, isEqual]) => {
       if (!isEqual) {
-        throw new UnauthorizedError('Неверный email или пароль');
+        throw new UnauthorizedError(unauthorizedErrorMessage);
       }
       const token = signToken({ _id: user._id });
       res.send({ token });
@@ -64,12 +72,12 @@ const getCurrentUser = (req, res, next) => {
   User
     .findById(req.user._id)
     .orFail(() => {
-      throw new NotFoundError('Пользователь по указанному id не найден');
+      throw new NotFoundError(notFoundUserMessage);
     })
     .then((user) => res.send({ email: user.email, name: user.name }))
     .catch((err) => {
       if (err instanceof mongoose.Error.CastError) {
-        next(new BadRequestError('Некорректный id пользователя'));
+        next(new BadRequestError(incorrectUserIdMessage));
       } else {
         next(err);
       }
@@ -87,12 +95,14 @@ const updateUserInfo = (req, res, next) => {
       { new: true, runValidators: true },
     )
     .orFail(() => {
-      throw new NotFoundError('Пользователь по указанному id не найден');
+      throw new NotFoundError(notFoundUserMessage);
     })
     .then((user) => res.send(user))
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        next(new BadRequestError('Переданы некорректные данные при обновлении профиля'));
+        next(new BadRequestError(validationErrorMessage));
+      } else if (err.code === MONGO_DUPLICATE_KEY_ERROR) {
+        next(new ConflictError(conflictErrorMessage));
       } else {
         next(err);
       }

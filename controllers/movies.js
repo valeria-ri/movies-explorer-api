@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 const Movie = require('../models/movie');
 const { HTTP_STATUS_CREATED } = require('../utils/constants');
-
+const {
+  validationErrorMessage,
+  incorrectMovieIdMessage,
+  forbiddenMovieMessage,
+  notFoundMovieMessage,
+} = require('../utils/errors/errorMessages');
 const {
   BadRequestError,
   ForbiddenError,
@@ -52,7 +57,7 @@ const createMovie = (req, res, next) => {
     .then((movie) => res.status(HTTP_STATUS_CREATED).send(movie))
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        next(new BadRequestError('Переданы некорректные данные при создании фильма'));
+        next(new BadRequestError(validationErrorMessage));
       } else {
         next(err);
       }
@@ -65,10 +70,10 @@ const deleteMovie = (req, res, next) => {
     .findById(req.params._id)
     .then((movie) => {
       if (!movie) {
-        throw new NotFoundError('Фильм с указанным id не найден');
+        throw new NotFoundError(notFoundMovieMessage);
       }
       if (movie.owner.toString() !== req.user._id.toString()) {
-        throw new ForbiddenError('Нет прав для удаления фильма');
+        throw new ForbiddenError(forbiddenMovieMessage);
       }
       return movie
         .deleteOne()
@@ -76,7 +81,7 @@ const deleteMovie = (req, res, next) => {
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.CastError) {
-        next(new BadRequestError('Удаление фильма с некорректным id'));
+        next(new BadRequestError(incorrectMovieIdMessage));
       } else {
         next(err);
       }
