@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const { errors } = require('celebrate');
@@ -17,6 +18,7 @@ const app = express();
 app.use(cors());
 mongoose.connect(NODE_ENV === 'production' ? MONGODB_URL : MONGODB_URL_DEV);
 app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // безопасность приложения
 app.use(limiter);
